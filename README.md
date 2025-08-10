@@ -67,4 +67,4 @@ export default tseslint.config([
   },
 ])
 ```
-Test commit to confirm GitHub sync123.
+Test commit to confirm GitHub sync.

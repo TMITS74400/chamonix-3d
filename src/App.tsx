@@ -1,10 +1,119 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Sky } from "@react-three/drei";
 import { useState } from "react";
-import ChamonixScene from "./scene/ChamonixScene";
+import ChamonixScene, { useSceneTextures } from "./scene/ChamonixScene";
+import { sampleHeightAtPosition } from "./scene/heightSampler";
+import { PLANE_WIDTH, PLANE_HEIGHT } from "./scene/constants";
 
 import SimpleMovementController from "./scene/SimpleMovementController";
 
+// Component for stylized low-poly trees
+function StylizedTrees() {
+  const treePositions = [
+    // Foreground trees
+    { x: -8, z: 5, scale: 1.2 },
+    { x: 6, z: 3, scale: 1.0 },
+    { x: -4, z: 8, scale: 0.8 },
+    { x: 10, z: 6, scale: 1.1 },
+    
+    // Midground trees
+    { x: -15, z: 12, scale: 0.9 },
+    { x: 12, z: 15, scale: 0.7 },
+    { x: -2, z: 18, scale: 0.8 },
+    { x: 8, z: 20, scale: 0.6 },
+    
+    // Background trees (smaller and more faded)
+    { x: -20, z: 25, scale: 0.5 },
+    { x: 18, z: 28, scale: 0.4 },
+    { x: -10, z: 30, scale: 0.5 },
+    { x: 15, z: 32, scale: 0.4 },
+  ];
+
+  return (
+    <group>
+      {treePositions.map((pos, index) => (
+        <TreeOnSurface key={index} x={pos.x} z={pos.z} scale={pos.scale} index={index} />
+      ))}
+    </group>
+  );
+}
+
+// Component for individual tree placed on surface
+function TreeOnSurface({ x, z, scale, index }: { x: number; z: number; scale: number; index: number }) {
+  const { height: heightTexture } = useSceneTextures();
+  
+  // Sample height at this position using the height sampler
+  const displacementScale = 6.0;
+  const displacementBias = -0.2;
+  
+  const height = sampleHeightAtPosition(
+    heightTexture,
+    x,
+    z,
+    PLANE_WIDTH,
+    PLANE_HEIGHT,
+    displacementScale,
+    displacementBias
+  );
+  
+  return (
+    <group position={[x, height, z]}>
+      {/* Tree trunk */}
+      <mesh position={[0, 0.5 * scale, 0]} castShadow>
+        <cylinderGeometry args={[0.1 * scale, 0.1 * scale, 1 * scale, 6]} />
+        <meshStandardMaterial color="#8B4513" roughness={0.8} />
+      </mesh>
+      
+      {/* Tree foliage - conical shape */}
+      <mesh position={[0, 1.5 * scale, 0]} castShadow>
+        <coneGeometry args={[0.8 * scale, 2 * scale, 6]} />
+        <meshStandardMaterial 
+          color={index < 4 ? "#228B22" : "#32CD32"} 
+          roughness={0.9}
+          transparent
+          opacity={index < 8 ? 0.9 : 0.7}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// Component for distant mountain silhouettes
+function DistantMountains() {
+  return (
+    <group position={[0, -0.5, -30]}>
+      {/* Left distant mountains - more jagged silhouette with color variation */}
+      <mesh position={[-35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[20, 12, 8, 4]} />
+        <meshBasicMaterial color="#8ba3b8" transparent opacity={0.5} />
+      </mesh>
+      
+      {/* Right distant mountains - different profile with warmer tones */}
+      <mesh position={[35, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[18, 10, 6, 3]} />
+        <meshBasicMaterial color="#9bb5c8" transparent opacity={0.45} />
+      </mesh>
+      
+      {/* Center distant mountains - main backdrop with blue tones */}
+      <mesh position={[0, 0, -8]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[25, 15, 10, 5]} />
+        <meshBasicMaterial color="#a8c0d5" transparent opacity={0.4} />
+      </mesh>
+      
+      {/* Additional atmospheric layer for depth with warm sunset tones */}
+      <mesh position={[0, 0, -15]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[40, 20, 1, 1]} />
+        <meshBasicMaterial color="#d4e5f5" transparent opacity={0.25} />
+      </mesh>
+      
+      {/* Warm atmospheric glow layer */}
+      <mesh position={[0, 0, -25]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[50, 25, 1, 1]} />
+        <meshBasicMaterial color="#f0f8ff" transparent opacity={0.15} />
+      </mesh>
+    </group>
+  );
+}
 
 
 export default function App() {
@@ -30,17 +139,33 @@ export default function App() {
 
   return (
     <div style={{ position: "fixed", inset: 0 }}>
-      <Canvas shadows camera={{ position: [initialCam[0], initialCam[1], initialCam[2]], fov: 55 }}>
-        <fog attach="fog" args={["#bcd0ff", 60, 220]} />
-        <ambientLight intensity={ambient} />
+      <Canvas shadows camera={{ position: [initialCam[0], initialCam[1], initialCam[2]], fov: 40 }}>
+        {/* Enhanced atmospheric fog with warmer tones */}
+        <fog attach="fog" args={["#e6f3ff", 120, 450]} />
+        <ambientLight intensity={ambient} color="#fff8f0" />
         <directionalLight
           position={[sunX, sunY, sunZ]}
           intensity={sunIntensity}
+          color="#fff8e6"
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <Sky sunPosition={[sunX, sunY, sunZ]} turbidity={6} />
+        {/* Enhanced sky with more vibrant colors */}
+        <Sky 
+          sunPosition={[sunX, sunY, sunZ]} 
+          turbidity={1.2} 
+          rayleigh={1.5}
+          mieCoefficient={0.002}
+          mieDirectionalG={0.95}
+        />
+        
+        {/* Distant mountain silhouettes for depth */}
+        <DistantMountains />
+        
+        {/* Stylized low-poly trees */}
+        <StylizedTrees />
+        
         <ChamonixScene 
           displacementScale={displacementScale} 
           displacementBias={displacementBias}
@@ -84,6 +209,77 @@ function ControlPanel({
     cameraXZ, enableOrbit, cameraSpeed
   } = values;
 
+  // Preset functions for different mountain views
+  const applyMountainPreset = () => {
+    onChange.setDisplacementScale(6.0);
+    onChange.setDisplacementBias(-0.2);
+    onChange.setAmbient(0.6);
+    onChange.setSunIntensity(1.5);
+    onChange.setSunX(50);
+    onChange.setSunY(60);
+    onChange.setSunZ(30);
+  };
+
+  const applyDramaticPreset = () => {
+    onChange.setDisplacementScale(8.0);
+    onChange.setDisplacementBias(-0.3);
+    onChange.setAmbient(0.4);
+    onChange.setSunIntensity(2.0);
+    onChange.setSunX(30);
+    onChange.setSunY(80);
+    onChange.setSunZ(20);
+  };
+
+  const applySunsetPreset = () => {
+    onChange.setDisplacementScale(6.5);
+    onChange.setDisplacementBias(-0.25);
+    onChange.setAmbient(0.8);
+    onChange.setSunIntensity(1.2);
+    onChange.setSunX(-20);
+    onChange.setSunY(40);
+    onChange.setSunZ(-10);
+  };
+
+  const applyGoldenHourPreset = () => {
+    onChange.setDisplacementScale(7.0);
+    onChange.setDisplacementBias(-0.3);
+    onChange.setAmbient(0.7);
+    onChange.setSunIntensity(1.8);
+    onChange.setSunX(40);
+    onChange.setSunY(50);
+    onChange.setSunZ(15);
+  };
+
+  const applyLowPolyPreset = () => {
+    onChange.setDisplacementScale(5.5);
+    onChange.setDisplacementBias(-0.2);
+    onChange.setAmbient(0.8);
+    onChange.setSunIntensity(1.2);
+    onChange.setSunX(60);
+    onChange.setSunY(70);
+    onChange.setSunZ(40);
+  };
+
+  const applyTwilightPreset = () => {
+    onChange.setDisplacementScale(6.5);
+    onChange.setDisplacementBias(-0.25);
+    onChange.setAmbient(0.6);
+    onChange.setSunIntensity(0.8);
+    onChange.setSunX(-30);
+    onChange.setSunY(30);
+    onChange.setSunZ(-20);
+  };
+
+  const applyArtisticPreset = () => {
+    onChange.setDisplacementScale(7.5);
+    onChange.setDisplacementBias(-0.35);
+    onChange.setAmbient(0.9);
+    onChange.setSunIntensity(1.0);
+    onChange.setSunX(45);
+    onChange.setSunY(60);
+    onChange.setSunZ(25);
+  };
+
   return (
     <div style={{
       position: "absolute", left: 12, bottom: 12, padding: 12,
@@ -91,6 +287,108 @@ function ControlPanel({
       fontFamily: "system-ui, sans-serif", fontSize: 13, display: "grid",
       gridTemplateColumns: "auto 1fr auto", gap: 8, width: 520
     }}>
+      {/* Preset buttons */}
+      <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, marginBottom: 8 }}>
+        <button 
+          onClick={applyMountainPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Mountain View
+        </button>
+        <button 
+          onClick={applyDramaticPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Dramatic
+        </button>
+        <button 
+          onClick={applySunsetPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Sunset
+        </button>
+        <button 
+          onClick={applyGoldenHourPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Golden Hour
+        </button>
+        <button 
+          onClick={applyLowPolyPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Low Poly
+        </button>
+        <button 
+          onClick={applyTwilightPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Twilight
+        </button>
+        <button 
+          onClick={applyArtisticPreset}
+          style={{ 
+            padding: "4px 8px", 
+            background: "rgba(255,255,255,0.2)", 
+            border: "1px solid rgba(255,255,255,0.3)", 
+            borderRadius: 4, 
+            color: "white", 
+            cursor: "pointer",
+            fontSize: 11
+          }}
+        >
+          Artistic
+        </button>
+      </div>
+
       <label style={{ opacity: 0.8 }}>Height</label>
       <input type="range" min={0} max={8} step={0.05} value={displacementScale}
         onChange={(e) => onChange.setDisplacementScale(parseFloat(e.target.value))} />

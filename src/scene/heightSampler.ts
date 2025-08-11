@@ -1,42 +1,51 @@
-import { Texture } from "three";
-import { PLANE_WIDTH, PLANE_HEIGHT } from "./constants";
+import { Texture } from 'three';
 
-export type HeightSampler = (x: number, z: number) => number;
-
-export async function createHeightSampler(heightTexture: Texture, displacementScale: number, displacementBias: number): Promise<HeightSampler> {
-  // Create an offscreen canvas to sample the height texture
-  const image = heightTexture.image as HTMLImageElement | HTMLCanvasElement | ImageBitmap;
-
-  // Ensure the texture is loaded
-  if (!image) {
-    return () => 0;
+export function sampleHeightAtPosition(
+  heightTexture: Texture,
+  worldX: number,
+  worldZ: number,
+  planeWidth: number,
+  planeHeight: number,
+  displacementScale: number,
+  displacementBias: number
+): number {
+  // Convert world coordinates to UV coordinates
+  const u = (worldX + planeWidth / 2) / planeWidth;
+  const v = (worldZ + planeHeight / 2) / planeHeight;
+  
+  // Clamp UV coordinates to valid range
+  const clampedU = Math.max(0, Math.min(1, u));
+  const clampedV = Math.max(0, Math.min(1, v));
+  
+  // Create a temporary canvas to sample the texture
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx || !heightTexture.image) {
+    // Fallback to mathematical approximation
+    return Math.sin(clampedU * 10) * Math.cos(clampedV * 8) * displacementScale + displacementBias;
   }
-
-  const canvas = document.createElement("canvas");
-  canvas.width = (image as any).width || 1024;
-  canvas.height = (image as any).height || 1024;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return () => 0;
-
-  ctx.drawImage(image as any, 0, 0, canvas.width, canvas.height);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-  // Convert scene x,z to pixel coords and sample grayscale
-  return (x: number, z: number) => {
-    const u = (x / PLANE_WIDTH) + 0.5;
-    const v = 0.5 - (z / PLANE_HEIGHT);
-
-    const px = Math.min(canvas.width - 1, Math.max(0, Math.floor(u * canvas.width)));
-    const py = Math.min(canvas.height - 1, Math.max(0, Math.floor(v * canvas.height)));
-
-    const idx = (py * canvas.width + px) * 4;
-    const r = imageData[idx];
-    const g = imageData[idx + 1];
-    const b = imageData[idx + 2];
-    // Grayscale (simple average)
-    const gray = (r + g + b) / 3 / 255;
-
-    // Convert to world height
-    return gray * displacementScale + displacementBias;
-  };
+  
+  canvas.width = 1;
+  canvas.height = 1;
+  
+  try {
+    // Draw a 1x1 pixel from the texture at the specified UV coordinates
+    ctx.drawImage(
+      heightTexture.image,
+      clampedU * heightTexture.image.width,
+      clampedV * heightTexture.image.height,
+      1, 1,
+      0, 0, 1, 1
+    );
+    
+    // Get the pixel data
+    const imageData = ctx.getImageData(0, 0, 1, 1);
+    const heightValue = imageData.data[0] / 255; // Red channel
+    
+    return heightValue * displacementScale + displacementBias;
+  } catch (error) {
+    // Fallback if texture sampling fails
+    return Math.sin(clampedU * 10) * Math.cos(clampedV * 8) * displacementScale + displacementBias;
+  }
 }

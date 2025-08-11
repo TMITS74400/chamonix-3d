@@ -29,7 +29,8 @@ export default function ChamonixScene({
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[PLANE_WIDTH, PLANE_HEIGHT, 300, 150]} />
+      {/* Low-poly geometry with fewer segments for stylized look */}
+      <planeGeometry args={[PLANE_WIDTH, PLANE_HEIGHT, 80, 40]} />
       <meshStandardMaterial 
         map={mapTexture}
         displacementMap={heightTexture}
@@ -37,6 +38,13 @@ export default function ChamonixScene({
         displacementBias={displacementBias}
         side={DoubleSide}
         wireframe={wireframe}
+        // Stylized material properties for low-poly look
+        roughness={0.9}
+        metalness={0.0}
+        color="#8fbc8f"
+        // Add subtle color variation
+        emissive="#2d4a2d"
+        emissiveIntensity={0.1}
       />
     </mesh>
   );

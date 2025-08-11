@@ -1,0 +1,110 @@
+[
+  {
+    "id": "chamonix-center",
+    "name": "Chamonix Town Center",
+    "type": "town",
+    "description": "Main town square with shops, restaurants, and tourist information",
+    "x": 0,
+    "z": 0,
+    "icon": "🏘️"
+  },
+  {
+    "id": "mer-de-glace",
+    "name": "Mer de Glace",
+    "type": "glacier",
+    "description": "Famous glacier accessible by train, with ice cave and museum",
+    "x": -40,
+    "z": 40,
+    "icon": "🧊"
+  },
+  {
+    "id": "bossons-glacier",
+    "name": "Bossons Glacier",
+    "type": "glacier", 
+    "description": "Impressive glacier descending from Mont Blanc",
+    "x": -50,
+    "z": -20,
+    "icon": "🧊"
+  },
+  {
+    "id": "argentiere",
+    "name": "Argentière",
+    "type": "village",
+    "description": "Traditional mountain village, gateway to Grands Montets",
+    "x": -70,
+    "z": 50,
+    "icon": "🏘️"
+  },
+  {
+    "id": "les-houches-village",
+    "name": "Les Houches Village",
+    "type": "village",
+    "description": "Family-friendly resort with gentle slopes",
+    "x": 85,
+    "z": -75,
+    "icon": "🏘️"
+  },
+  {
+    "id": "mont-blanc-tunnel",
+    "name": "Mont Blanc Tunnel",
+    "type": "transport",
+    "description": "Tunnel connecting France to Italy under Mont Blanc",
+    "x": -60,
+    "z": -90,
+    "icon": "🚇"
+  },
+  {
+    "id": "chamonix-train",
+    "name": "Chamonix Train Station",
+    "type": "transport",
+    "description": "Main railway station connecting to Geneva and beyond",
+    "x": 10,
+    "z": -10,
+    "icon": "🚂"
+  },
+  {
+    "id": "aiguille-du-midi-cable-car",
+    "name": "Aiguille du Midi Cable Car",
+    "type": "transport",
+    "description": "Cable car to the iconic Aiguille du Midi peak",
+    "x": 45,
+    "z": 15,
+    "icon": "🚡"
+  },
+  {
+    "id": "brevent-cable-car",
+    "name": "Brévent Cable Car",
+    "type": "transport", 
+    "description": "Cable car to Brévent with stunning valley views",
+    "x": 35,
+    "z": -25,
+    "icon": "🚡"
+  },
+  {
+    "id": "chamonix-casino",
+    "name": "Chamonix Casino",
+    "type": "entertainment",
+    "description": "Casino and entertainment complex",
+    "x": 5,
+    "z": 5,
+    "icon": "🎰"
+  },
+  {
+    "id": "chamonix-museum",
+    "name": "Chamonix Alpine Museum",
+    "type": "culture",
+    "description": "Museum dedicated to mountaineering history",
+    "x": -5,
+    "z": 8,
+    "icon": "🏛️"
+  },
+  {
+    "id": "chamonix-church",
+    "name": "Chamonix Church",
+    "type": "culture",
+    "description": "Historic church in the town center",
+    "x": -8,
+    "z": -5,
+    "icon": "⛪"
+  }
+]

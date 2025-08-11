@@ -1,137 +1,224 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Sky, PointerLockControls } from "@react-three/drei";
-import { useState } from "react";
-import ChamonixScene from "./scene/ChamonixScene";
+import { OrbitControls, Sky } from "@react-three/drei";
+import { useEffect, useMemo, useState } from "react";
+import ChamonixScene, { useSceneTextures } from "./scene/ChamonixScene";
+import FirstPersonGroundController from "./scene/FirstPersonGroundController";
+import SimpleMovementController from "./scene/SimpleMovementController";
+
+import { createHeightSampler } from "./scene/heightSampler";
 
 export default function App() {
-  const [isFirstPerson, setIsFirstPerson] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  // Terrain controls
+  const [displacementScale, setDisplacementScale] = useState(4.0);
+  const [displacementBias, setDisplacementBias] = useState(0.0);
+  const [wireframe, setWireframe] = useState(false);
+
+  // Lighting controls - improved for better contour visibility
+  const [ambient, setAmbient] = useState(0.4);
+  const [sunIntensity, setSunIntensity] = useState(2.0);
+  const [sunX, setSunX] = useState(80);
+  const [sunY, setSunY] = useState(40);
+  const [sunZ, setSunZ] = useState(80);
+
+  // Camera and movement
+  const initialCam: [number, number, number] = [-3.7, 0.9, 4.8];
+  const [cameraXZ, setCameraXZ] = useState<[number, number]>([initialCam[0], initialCam[2]]);
+  const [enableOrbit, setEnableOrbit] = useState(false);
+  const [cameraSpeed, setCameraSpeed] = useState(50);
+
+  // Textures and height sampler
+  const { height } = useSceneTextures();
+  const samplerPromise = useMemo(() => {
+    console.log("Creating height sampler with:", { displacementScale, displacementBias });
+    return createHeightSampler(height, displacementScale, displacementBias);
+  }, [height, displacementScale, displacementBias]);
 
   return (
     <div style={{ position: "fixed", inset: 0 }}>
-      <Canvas shadows camera={{ position: [12, 18, 24], fov: 55 }}>
+      <Canvas shadows camera={{ position: [initialCam[0], initialCam[1], initialCam[2]], fov: 55 }}>
         <fog attach="fog" args={["#bcd0ff", 60, 220]} />
-        <ambientLight intensity={0.4} />
+        <ambientLight intensity={ambient} />
         <directionalLight
-          position={[18, 12, 6]}
-          intensity={1}
+          position={[sunX, sunY, sunZ]}
+          intensity={sunIntensity}
           castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
         />
-        <Sky sunPosition={[100, 20, 100]} turbidity={6} />
-        <ChamonixScene />
-        {isFirstPerson ? (
-          <PointerLockControls />
-        ) : (
+        <Sky sunPosition={[sunX, sunY, sunZ]} turbidity={6} />
+        <ChamonixScene 
+          displacementScale={displacementScale} 
+          displacementBias={displacementBias}
+          wireframe={wireframe}
+        />
+        {enableOrbit ? (
           <OrbitControls makeDefault enableDamping />
+        ) : (
+          // Simple movement controller for now
+          <SimpleMovementController speed={cameraSpeed} />
         )}
       </Canvas>
 
-      {/* Top Navigation Bar */}
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, height: 60,
-        background: "linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 20px", color: "white", fontFamily: "system-ui, sans-serif"
-      }}>
-        <div style={{ fontSize: 18, fontWeight: 600 }}>
-          Chamonix 3D — Interactive Discovery Platform
-        </div>
-        
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button
-            onClick={() => setIsFirstPerson(!isFirstPerson)}
-            style={{
-              padding: "8px 16px", background: isFirstPerson ? "#22c55e" : "rgba(255,255,255,0.2)",
-              border: "none", borderRadius: 6, color: "white", cursor: "pointer",
-              fontSize: 14, fontWeight: 500
-            }}
-          >
-            {isFirstPerson ? "Exit First Person" : "Enter First Person"}
-          </button>
-          
-          <button
-            onClick={() => setShowChat(!showChat)}
-            style={{
-              padding: "8px 16px", background: showChat ? "#3b82f6" : "rgba(255,255,255,0.2)",
-              border: "none", borderRadius: 6, color: "white", cursor: "pointer",
-              fontSize: 14, fontWeight: 500
-            }}
-          >
-            {showChat ? "Close AI Guide" : "Open AI Guide"}
-          </button>
-        </div>
-      </div>
+      <ControlPanel
+        values={{
+          displacementScale, displacementBias, wireframe,
+          ambient, sunIntensity, sunX, sunY, sunZ,
+          cameraXZ, enableOrbit, cameraSpeed
+        }}
+        onChange={{
+          setDisplacementScale, setDisplacementBias, setWireframe,
+          setAmbient, setSunIntensity, setSunX, setSunY, setSunZ,
+          setCameraXZ, setEnableOrbit, setCameraSpeed
+        }}
+      />
+    </div>
+  );
+}
 
-      {/* AI Chat Interface */}
-      {showChat && (
-        <div style={{
-          position: "absolute", bottom: 20, left: 20, right: 20, height: 300,
-          background: "rgba(0,0,0,0.9)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.2)",
-          display: "flex", flexDirection: "column", color: "white", fontFamily: "system-ui, sans-serif"
-        }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.1)", fontWeight: 600 }}>
-            🤖 AI Guide — Ask me anything about Chamonix!
-          </div>
-          
-          <div style={{ flex: 1, padding: "20px", overflowY: "auto" }}>
-            <div style={{ 
-              background: "rgba(59, 130, 246, 0.3)", 
-              padding: "12px 16px", 
-              borderRadius: 8, 
-              marginBottom: 12,
-              border: "1px solid rgba(59, 130, 246, 0.5)"
-            }}>
-              👋 Welcome to Chamonix! I'm your AI guide. Ask me about lifts, weather, restaurants, 
-              activities, or anything else you'd like to know about this amazing mountain town.
-            </div>
-          </div>
-          
-          <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                type="text"
-                placeholder="Ask about lifts, weather, restaurants..."
-                style={{
-                  flex: 1, padding: "12px 16px", background: "rgba(255,255,255,0.1)",
-                  border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8,
-                  color: "white", fontSize: 14
-                }}
-              />
-              <button style={{
-                padding: "12px 20px", background: "#3b82f6", border: "none",
-                borderRadius: 8, color: "white", cursor: "pointer", fontWeight: 500
-              }}>
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+function AsyncController({ samplerPromise, initialPosition, onXZChange, speed }: {
+  samplerPromise: Promise<(x: number, z: number) => number>;
+  initialPosition: [number, number, number];
+  onXZChange: (xz: [number, number]) => void;
+  speed: number;
+}) {
+  const [sampler, setSampler] = useState<null | ((x: number, z: number) => number)>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => { 
+    console.log("AsyncController: Loading sampler...");
+    samplerPromise.then((s) => {
+      console.log("AsyncController: Sampler loaded successfully");
+      setSampler(s);
+      setLoading(false);
+    }).catch((err) => {
+      console.error("AsyncController: Failed to load sampler", err);
+      setLoading(false);
+    });
+  }, [samplerPromise]);
+  
+  if (loading) {
+    console.log("AsyncController: Still loading...");
+    return null;
+  }
+  
+  if (!sampler) {
+    console.error("AsyncController: No sampler available");
+    return null;
+  }
+  
+  console.log("AsyncController: Rendering FirstPersonGroundController with speed:", speed);
+  return (
+    <FirstPersonGroundController
+      sampler={sampler}
+      eyeHeight={1.7}
+      speed={speed}
+      enablePointerLock={false}
+      initialPosition={initialPosition}
+      onPosition={(pos) => onXZChange([pos[0], pos[2]])}
+    />
+  );
+}
 
-      {/* Quick Info Panel */}
-      <div style={{
-        position: "absolute", top: 80, right: 20, width: 280,
-        background: "rgba(0,0,0,0.8)", borderRadius: 12, padding: 16,
-        color: "white", fontFamily: "system-ui, sans-serif", fontSize: 14
-      }}>
-        <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
-          📍 Current Location
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ opacity: 0.7 }}>Area:</span> Chamonix Valley
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ opacity: 0.7 }}>Weather:</span> ☀️ 12°C, Clear
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <span style={{ opacity: 0.7 }}>Lifts Open:</span> 3/5
-        </div>
-        <div>
-          <span style={{ opacity: 0.7 }}>Snow Depth:</span> 45cm
-        </div>
-      </div>
+function ControlPanel({
+  values, onChange
+}: {
+  values: any;
+  onChange: any;
+}) {
+  const {
+    displacementScale, displacementBias, wireframe,
+    ambient, sunIntensity, sunX, sunY, sunZ,
+    cameraXZ, enableOrbit, cameraSpeed
+  } = values;
+
+  return (
+    <div style={{
+      position: "absolute", left: 12, bottom: 12, padding: 12,
+      background: "rgba(0,0,0,0.8)", color: "white", borderRadius: 10,
+      fontFamily: "system-ui, sans-serif", fontSize: 13, display: "grid",
+      gridTemplateColumns: "auto 1fr auto", gap: 8, width: 520
+    }}>
+      <label style={{ opacity: 0.8 }}>Height</label>
+      <input type="range" min={0} max={8} step={0.05} value={displacementScale}
+        onChange={(e) => onChange.setDisplacementScale(parseFloat(e.target.value))} />
+      <input type="number" min={0} max={8} step={0.05} value={displacementScale}
+        onChange={(e) => onChange.setDisplacementScale(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Bias</label>
+      <input type="range" min={-4} max={4} step={0.01} value={displacementBias}
+        onChange={(e) => onChange.setDisplacementBias(parseFloat(e.target.value))} />
+      <input type="number" min={-4} max={4} step={0.01} value={displacementBias}
+        onChange={(e) => onChange.setDisplacementBias(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Wireframe</label>
+      <input type="checkbox" checked={wireframe}
+        onChange={(e) => onChange.setWireframe(e.target.checked)} />
+      <span />
+
+      <div style={{ gridColumn: "1 / -1", height: 1, background: "rgba(255,255,255,0.2)", margin: "8px 0" }} />
+
+      <label style={{ opacity: 0.8 }}>Ambient</label>
+      <input type="range" min={0} max={2} step={0.05} value={ambient}
+        onChange={(e) => onChange.setAmbient(parseFloat(e.target.value))} />
+      <input type="number" min={0} max={2} step={0.05} value={ambient}
+        onChange={(e) => onChange.setAmbient(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Sun Intensity</label>
+      <input type="range" min={0} max={5} step={0.05} value={sunIntensity}
+        onChange={(e) => onChange.setSunIntensity(parseFloat(e.target.value))} />
+      <input type="number" min={0} max={5} step={0.05} value={sunIntensity}
+        onChange={(e) => onChange.setSunIntensity(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Sun X</label>
+      <input type="range" min={-200} max={200} step={1} value={sunX}
+        onChange={(e) => onChange.setSunX(parseFloat(e.target.value))} />
+      <input type="number" min={-200} max={200} step={1} value={sunX}
+        onChange={(e) => onChange.setSunX(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Sun Y</label>
+      <input type="range" min={0} max={200} step={1} value={sunY}
+        onChange={(e) => onChange.setSunY(parseFloat(e.target.value))} />
+      <input type="number" min={0} max={200} step={1} value={sunY}
+        onChange={(e) => onChange.setSunY(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Sun Z</label>
+      <input type="range" min={-200} max={200} step={1} value={sunZ}
+        onChange={(e) => onChange.setSunZ(parseFloat(e.target.value))} />
+      <input type="number" min={-200} max={200} step={1} value={sunZ}
+        onChange={(e) => onChange.setSunZ(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <div style={{ gridColumn: "1 / -1", height: 1, background: "rgba(255,255,255,0.2)", margin: "8px 0" }} />
+
+      <label style={{ opacity: 0.8 }}>Camera Speed</label>
+      <input type="range" min={1} max={200} step={1} value={cameraSpeed}
+        onChange={(e) => onChange.setCameraSpeed(parseFloat(e.target.value))} />
+      <input type="number" min={1} max={200} step={1} value={cameraSpeed}
+        onChange={(e) => onChange.setCameraSpeed(parseFloat(e.target.value))}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+
+      <label style={{ opacity: 0.8 }}>Camera X</label>
+      <input type="number" step={0.1} value={cameraXZ[0]}
+        onChange={(e) => onChange.setCameraXZ([parseFloat(e.target.value), cameraXZ[1]])}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+      <span />
+
+      <label style={{ opacity: 0.8 }}>Camera Z</label>
+      <input type="number" step={0.1} value={cameraXZ[1]}
+        onChange={(e) => onChange.setCameraXZ([cameraXZ[0], parseFloat(e.target.value)])}
+        style={{ width: 60, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 4, color: "white", padding: "2px 4px" }} />
+      <span />
+
+      <label style={{ opacity: 0.8 }}>Orbit Mode</label>
+      <input type="checkbox" checked={enableOrbit}
+        onChange={(e) => onChange.setEnableOrbit(e.target.checked)} />
+      <span />
     </div>
   );
 }

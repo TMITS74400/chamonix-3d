@@ -1,11 +1,11 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Sky } from "@react-three/drei";
-import { useEffect, useMemo, useState } from "react";
-import ChamonixScene, { useSceneTextures } from "./scene/ChamonixScene";
-import FirstPersonGroundController from "./scene/FirstPersonGroundController";
+import { useState } from "react";
+import ChamonixScene from "./scene/ChamonixScene";
+
 import SimpleMovementController from "./scene/SimpleMovementController";
 
-import { createHeightSampler } from "./scene/heightSampler";
+
 
 export default function App() {
   // Terrain controls
@@ -26,12 +26,7 @@ export default function App() {
   const [enableOrbit, setEnableOrbit] = useState(false);
   const [cameraSpeed, setCameraSpeed] = useState(50);
 
-  // Textures and height sampler
-  const { height } = useSceneTextures();
-  const samplerPromise = useMemo(() => {
-    console.log("Creating height sampler with:", { displacementScale, displacementBias });
-    return createHeightSampler(height, displacementScale, displacementBias);
-  }, [height, displacementScale, displacementBias]);
+
 
   return (
     <div style={{ position: "fixed", inset: 0 }}>
@@ -75,49 +70,7 @@ export default function App() {
   );
 }
 
-function AsyncController({ samplerPromise, initialPosition, onXZChange, speed }: {
-  samplerPromise: Promise<(x: number, z: number) => number>;
-  initialPosition: [number, number, number];
-  onXZChange: (xz: [number, number]) => void;
-  speed: number;
-}) {
-  const [sampler, setSampler] = useState<null | ((x: number, z: number) => number)>(null);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => { 
-    console.log("AsyncController: Loading sampler...");
-    samplerPromise.then((s) => {
-      console.log("AsyncController: Sampler loaded successfully");
-      setSampler(s);
-      setLoading(false);
-    }).catch((err) => {
-      console.error("AsyncController: Failed to load sampler", err);
-      setLoading(false);
-    });
-  }, [samplerPromise]);
-  
-  if (loading) {
-    console.log("AsyncController: Still loading...");
-    return null;
-  }
-  
-  if (!sampler) {
-    console.error("AsyncController: No sampler available");
-    return null;
-  }
-  
-  console.log("AsyncController: Rendering FirstPersonGroundController with speed:", speed);
-  return (
-    <FirstPersonGroundController
-      sampler={sampler}
-      eyeHeight={1.7}
-      speed={speed}
-      enablePointerLock={false}
-      initialPosition={initialPosition}
-      onPosition={(pos) => onXZChange([pos[0], pos[2]])}
-    />
-  );
-}
+
 
 function ControlPanel({
   values, onChange

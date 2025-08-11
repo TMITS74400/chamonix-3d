@@ -1,35 +1,35 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Sky } from "@react-three/drei";
+import ChamonixScene from "./scene/ChamonixScene";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div style={{ position: "fixed", inset: 0 }}>
+      <Canvas shadows camera={{ position: [12, 8, 12], fov: 55 }}>
+        {/* lights & sky */}
+        <ambientLight intensity={0.4} />
+        <directionalLight
+          position={[8, 12, 6]}
+          intensity={1}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
+        <Sky sunPosition={[100, 20, 100]} turbidity={6} />
+        {/* scene */}
+        <ChamonixScene />
+        {/* simple controls for now (we can switch to first-person later) */}
+        <OrbitControls makeDefault enableDamping />
+      </Canvas>
 
-export default App
+      {/* Minimal HUD label */}
+      <div style={{
+        position: "absolute", top: 12, left: 12, padding: "8px 12px",
+        background: "rgba(0,0,0,0.45)", color: "white", borderRadius: 8,
+        fontFamily: "system-ui, sans-serif", fontSize: 14
+      }}>
+        Chamonix 3D — Prototype
+      </div>
+    </div>
+  );
+}

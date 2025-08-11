@@ -1,0 +1,7 @@
+[
+    { "id": "aiguille-mid",      "name": "Aiguille du Midi",  "status": "open",   "x":  40, "z": -10 },
+    { "id": "brevent",           "name": "Brévent",           "status": "hold",   "x": -25, "z":  15 },
+    { "id": "flegere",           "name": "Flégère",           "status": "open",   "x": -60, "z":  10 },
+    { "id": "les-houches",       "name": "Les Houches",       "status": "closed", "x":  70, "z":  35 },
+    { "id": "grands-montets",    "name": "Grands Montets",    "status": "open",   "x": -80, "z": -40 }
+  ]

@@ -6,6 +6,7 @@ export default function App() {
   return (
     <div style={{ position: "fixed", inset: 0 }}>
       <Canvas shadows camera={{ position: [12, 8, 12], fov: 55 }}>
+      <fog attach="fog" args={["#bcd0ff", 60, 220]} />
         {/* lights & sky */}
         <ambientLight intensity={0.4} />
         <directionalLight

@@ -5,7 +5,7 @@ import ChamonixScene, { useSceneTextures } from "./scene/ChamonixScene";
 import { sampleHeightAtPosition } from "./scene/heightSampler";
 import { PLANE_WIDTH, PLANE_HEIGHT } from "./scene/constants";
 
-import SimpleMovementController from "./scene/SimpleMovementController";
+import FirstPersonGroundController from "./scene/FirstPersonGroundController";
 
 // Component for stylized low-poly trees
 function StylizedTrees() {
@@ -135,6 +135,15 @@ export default function App() {
   const [enableOrbit, setEnableOrbit] = useState(false);
   const [cameraSpeed, setCameraSpeed] = useState(50);
 
+  // Instructions state
+  const [instructionsMoved, setInstructionsMoved] = useState(false);
+  const [instructionsClosed, setInstructionsClosed] = useState(false);
+
+  const handleInstructionsStateChange = (state: { moved: boolean; closed: boolean }) => {
+    setInstructionsMoved(state.moved);
+    setInstructionsClosed(state.closed);
+  };
+
 
 
   return (
@@ -174,10 +183,83 @@ export default function App() {
         {enableOrbit ? (
           <OrbitControls makeDefault enableDamping />
         ) : (
-          // Simple movement controller for now
-          <SimpleMovementController speed={cameraSpeed} />
+          // First person ground controller with mouse look
+          <FirstPersonGroundController 
+            sampler={(x: number, z: number) => sampleHeightAtPosition(
+              useSceneTextures().height,
+              x, z,
+              PLANE_WIDTH,
+              PLANE_HEIGHT,
+              displacementScale,
+              displacementBias
+            )}
+            speed={cameraSpeed / 10}
+            enablePointerLock={true}
+            initialPosition={initialCam}
+            onPosition={([x, y, z]) => setCameraXZ([x, z])}
+            onInstructionsStateChange={handleInstructionsStateChange}
+          />
         )}
       </Canvas>
+
+      {/* Instructions overlay */}
+      {!instructionsClosed && (
+        <div
+          style={{
+            position: 'fixed',
+            top: instructionsMoved ? 'auto' : '50%',
+            left: instructionsMoved ? 'auto' : '50%',
+            right: instructionsMoved ? '20px' : 'auto',
+            bottom: instructionsMoved ? '20px' : 'auto',
+            transform: instructionsMoved ? 'none' : 'translate(-50%, -50%)',
+            background: "rgba(0, 0, 0, 0.9)",
+            color: "white",
+            padding: "16px 20px",
+            borderRadius: "12px",
+            fontSize: "14px",
+            fontFamily: "system-ui, sans-serif",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+            pointerEvents: "auto",
+            textAlign: "center",
+            minWidth: "240px",
+            maxWidth: "300px",
+            zIndex: 1000,
+            transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div style={{ marginBottom: "8px", fontWeight: "600", fontSize: "16px" }}>
+            🖱️ Click and Drag to Look Around
+          </div>
+          <div style={{ fontSize: "13px", opacity: "0.8", marginBottom: "12px" }}>
+            WASD to move • Mouse to look around
+          </div>
+          
+          <button
+            onClick={() => setInstructionsClosed(true)}
+            style={{
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              color: "white",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              fontFamily: "inherit",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+            }}
+          >
+            Got it!
+          </button>
+        </div>
+      )}
 
       <ControlPanel
         values={{

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Vector3, Euler } from "three";
-import type { HeightSampler } from "./heightSampler";
+
+type HeightSampler = (x: number, z: number) => number;
 
 export default function FirstPersonGroundController({
   sampler,
@@ -10,6 +11,7 @@ export default function FirstPersonGroundController({
   enablePointerLock = false,
   initialPosition,
   onPosition,
+  onInstructionsStateChange,
 }: {
   sampler: HeightSampler;
   eyeHeight?: number;
@@ -17,6 +19,7 @@ export default function FirstPersonGroundController({
   enablePointerLock?: boolean;
   initialPosition?: [number, number, number];
   onPosition?: (pos: [number, number, number]) => void;
+  onInstructionsStateChange?: (state: { moved: boolean; closed: boolean }) => void;
 }) {
   const { camera, gl } = useThree();
   const velocity = useRef(new Vector3());
@@ -24,6 +27,10 @@ export default function FirstPersonGroundController({
   const euler = useRef(new Euler(0, 0, 0, "YXZ"));
   const keys = useRef<Record<string, boolean>>({});
   const hasInit = useRef(false);
+  const isDragging = useRef(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
+  const [instructionsMoved, setInstructionsMoved] = useState(false);
+  const [instructionsClosed, setInstructionsClosed] = useState(false);
 
   useEffect(() => {
     if (initialPosition && !hasInit.current) {
@@ -46,34 +53,78 @@ export default function FirstPersonGroundController({
   }, []);
 
   useEffect(() => {
-    if (!enablePointerLock) return;
     const canvas = gl.domElement;
-    const onClick = () => canvas.requestPointerLock();
-    canvas.addEventListener("click", onClick);
-
+    
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) { // Left mouse button only
+        isDragging.current = true;
+        lastMousePos.current = { x: e.clientX, y: e.clientY };
+        canvas.style.cursor = 'grabbing';
+        
+        // Move instructions to corner after first interaction
+        if (!instructionsMoved) {
+          setInstructionsMoved(true);
+          onInstructionsStateChange?.({ moved: true, closed: false });
+        }
+      }
+    };
+    
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        isDragging.current = false;
+        canvas.style.cursor = 'grab';
+      }
+    };
+    
     const onMouseMove = (e: MouseEvent) => {
-      if (document.pointerLockElement !== canvas) return;
-      const movementX = e.movementX || 0;
-      const movementY = e.movementY || 0;
-      euler.current.y -= movementX * 0.0025; // yaw
-      euler.current.x -= movementY * 0.0025; // pitch
-      euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+      if (!isDragging.current) return;
+      
+      const deltaX = e.clientX - lastMousePos.current.x;
+      const deltaY = e.clientY - lastMousePos.current.y;
+      
+      // Mouse sensitivity
+      const sensitivity = 0.003;
+      euler.current.y -= deltaX * sensitivity; // yaw
+      euler.current.x -= deltaY * sensitivity; // pitch
+      
+      // Clamp pitch to prevent over-rotation
+      euler.current.x = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, euler.current.x));
+      
+      // Apply rotation to camera
       camera.quaternion.setFromEuler(euler.current);
+      
+      // Update last mouse position
+      lastMousePos.current = { x: e.clientX, y: e.clientY };
     };
 
-    document.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mousedown", onMouseDown);
+    canvas.addEventListener("mouseup", onMouseUp);
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mouseleave", () => {
+      isDragging.current = false;
+      canvas.style.cursor = 'grab';
+    });
+    
+    // Set initial cursor style
+    canvas.style.cursor = 'grab';
+    
     return () => {
-      canvas.removeEventListener("click", onClick);
-      document.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("mousedown", onMouseDown);
+      canvas.removeEventListener("mouseup", onMouseUp);
+      canvas.removeEventListener("mousemove", onMouseMove);
+      canvas.removeEventListener("mouseleave", () => {
+        isDragging.current = false;
+        canvas.style.cursor = 'grab';
+      });
     };
-  }, [enablePointerLock, gl, camera]);
+  }, [gl, camera, instructionsMoved, onInstructionsStateChange]);
 
   useFrame((_, delta) => {
     // Clamp delta to prevent huge jumps if frame rate drops
     const clampedDelta = Math.min(delta, 1/30); // Max 30fps equivalent
     
-    // Update euler from camera quaternion if not in pointer lock mode
-    if (!enablePointerLock) {
+    // Update euler from camera quaternion if not dragging
+    if (!isDragging.current) {
       euler.current.setFromQuaternion(camera.quaternion);
     }
     
@@ -84,11 +135,6 @@ export default function FirstPersonGroundController({
     if (keys.current["KeyA"]) direction.current.x -= 1;
     if (keys.current["KeyD"]) direction.current.x += 1;
     
-    // Debug: log key presses
-    if (keys.current["KeyW"] || keys.current["KeyS"] || keys.current["KeyA"] || keys.current["KeyD"]) {
-      console.log("Keys pressed:", Object.keys(keys.current).filter(k => keys.current[k]));
-    }
-    
     if (direction.current.lengthSq() > 0) direction.current.normalize();
 
     // Transform direction into world space using camera rotation (yaw only)
@@ -96,8 +142,8 @@ export default function FirstPersonGroundController({
     const forward = new Vector3(Math.sin(yaw), 0, Math.cos(yaw)).multiplyScalar(direction.current.z);
     const strafe = new Vector3(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar(direction.current.x);
 
-    // Apply speed with proper delta time - much faster movement
-    velocity.current.copy(forward.add(strafe)).multiplyScalar(speed * clampedDelta * 10);
+    // Apply speed with proper delta time
+    velocity.current.copy(forward.add(strafe)).multiplyScalar(speed * clampedDelta);
 
     // Move camera
     camera.position.add(velocity.current);

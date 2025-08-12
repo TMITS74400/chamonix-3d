@@ -1,6 +1,6 @@
 import { useTexture } from "@react-three/drei";
 import { useEffect, useRef } from "react";
-import { DoubleSide, Color, Mesh, BufferAttribute } from "three";
+import { DoubleSide, Mesh, BufferAttribute } from "three";
 
 type Props = {
   heightmapSrc: string;   // "/assets/chamonix-heightmap.png"

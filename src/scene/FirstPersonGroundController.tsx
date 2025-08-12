@@ -8,7 +8,6 @@ export default function FirstPersonGroundController({
   sampler,
   eyeHeight = 1.7,
   speed = 8,
-  enablePointerLock = false,
   initialPosition,
   onPosition,
   onInstructionsStateChange,
@@ -30,7 +29,7 @@ export default function FirstPersonGroundController({
   const isDragging = useRef(false);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const [instructionsMoved, setInstructionsMoved] = useState(false);
-  const [instructionsClosed, setInstructionsClosed] = useState(false);
+
 
   useEffect(() => {
     if (initialPosition && !hasInit.current) {

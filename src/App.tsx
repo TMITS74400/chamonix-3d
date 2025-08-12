@@ -196,7 +196,7 @@ export default function App() {
             speed={cameraSpeed / 10}
             enablePointerLock={true}
             initialPosition={initialCam}
-            onPosition={([x, y, z]) => setCameraXZ([x, z])}
+            onPosition={([x, _, z]) => setCameraXZ([x, z])}
             onInstructionsStateChange={handleInstructionsStateChange}
           />
         )}
